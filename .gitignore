@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+
+# Output files (optional - remove this line if you want to track output)
+output_*.pptx
+
+# Temp
+temp_pptx/

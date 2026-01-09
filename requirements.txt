@@ -1,0 +1,5 @@
+python-pptx>=1.0.0
+pandas>=2.0.0
+lxml>=4.9.0
+pillow>=9.0.0
+numpy>=1.24.0
