@@ -1,5 +1,4 @@
 """
-Leo's Automated Weekly Report Generator
 Generates a PowerPoint report using template.pptx and functions from functions.py
 """
 
