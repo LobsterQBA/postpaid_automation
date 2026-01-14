@@ -472,6 +472,34 @@ def format_values_with_color(df, value_column, low_threshold, high_threshold, ad
 
     return list_val
 
+def add_textbox(slide, text, left, top, width, height, font_size=14, bold=False, color=None, align='left'):
+    """Add a text box to a slide"""
+    from pptx.util import Inches, Pt
+    from pptx.enum.text import PP_ALIGN
+    from pptx.dml.color import RGBColor
+    
+    textbox = slide.shapes.add_textbox(left, top, width, height)
+    tf = textbox.text_frame
+    tf.word_wrap = True
+    
+    p = tf.paragraphs[0]
+    p.text = text
+    p.font.size = Pt(font_size)
+    p.font.bold = bold
+    
+    if color:
+        p.font.color.rgb = color
+    
+    if align == 'center':
+        p.alignment = PP_ALIGN.CENTER
+    elif align == 'right':
+        p.alignment = PP_ALIGN.RIGHT
+    else:
+        p.alignment = PP_ALIGN.LEFT
+    
+    return textbox
+
+
 def insert_image_to_placeholder(slide, location_name, image_path,verbose=False):
     from pptx.util import Inches
     import os
