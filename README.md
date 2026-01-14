@@ -1,41 +1,61 @@
-# PowerPoint Report Automation
+# Postpaid Marketing Data Automation
 
-Automated PowerPoint report generation using Python.
+Automated tools for processing Postpaid marketing data and generating PowerPoint reports.
+
+## Features
+
+- **Data Cleaning**: Automatically clean Email/SMS marketing data, extract key fields from Delivery Labels
+- **PPT Report Generation**: Auto-generate weekly PowerPoint reports from templates
+- **Web Apps**: Streamlit interfaces for uploading data and downloading cleaned results or PPT reports
 
 ## Quick Start
 
 ```bash
-# Install dependencies (first time only)
-pip3 install python-pptx pandas lxml pillow
+# Install dependencies
+pip install -r requirements.txt
 
-# Generate report
-python3 leo_automation.py
+# Run data cleaning web app
+streamlit run app.py
+
+# Run PPT generator web app
+streamlit run ppt_generator_app.py
+
+# Generate report via command line
+python report_automation.py
 ```
-
-Output: `output_leo_report.pptx`
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `leo_automation.py` | Main script - generates weekly report |
-| `functions.py` | Core utility functions for PPT manipulation |
-| `template.pptx` | PowerPoint template |
-| `app.py` | Streamlit automation with all channels |
-| `EM_cleaning_automation.py` | EM PBI data automation |
-| `EM_clicks_cleaning_automation.py` | EM Clicks data automation |
+| `app.py` | Streamlit data cleaning app - supports Email/SMS data cleaning |
+| `ppt_generator_app.py` | Streamlit PPT generator app - upload Excel to generate reports |
+| `report_automation.py` | Command line PPT report generation script |
+| `functions.py` | Core PPT manipulation functions |
+| `EM_cleaning_automation.py` | Email data cleaning script (standalone) |
+| `EM_clicks_cleaning_automation.py` | Email click data cleaning script (standalone) |
+| `template.pptx` | PowerPoint template file |
+| `data_template.xlsx` | Sample data template |
 
-## How It Works
+## Data Format Requirements
 
-1. Loads `template.pptx` as base
-2. Duplicates slides and replaces placeholder text
-3. Fills tables with data using `add_data_table_new()`
-4. Removes original template slides
-5. Saves final report
+### PPT Generation (data_template.xlsx)
+Excel file must contain the following sheets:
+- `EM` - Email data
+- `SMS` - SMS data  
+- `SL Testing` - Subject Line testing data
 
-## Customization
+### Data Cleaning (app.py)
+Supports uploading:
+- Raw Email Data (PBI export)
+- Email Click Data (AcV8 export)
+- SMS Data (PBI or Branch.io export)
+- Deploy Document (MD/DD Excel)
 
-Edit `leo_automation.py` to:
-- Change report title
-- Update mock data with real data
-- Add/remove slides
+## Dependencies
+
+- python-pptx - PPT manipulation
+- pandas - Data processing
+- streamlit - Web interface
+- openpyxl - Excel read/write
+- lxml, pillow, numpy - Supporting libraries
