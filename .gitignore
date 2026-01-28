@@ -10,3 +10,9 @@ output_*.pptx
 
 # Temp
 temp_pptx/
+# Ignore files
+.DS_Store
+__pycache__/
+*.pyc
+test_output*.pptx
+

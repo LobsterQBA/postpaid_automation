@@ -64,8 +64,12 @@ def duplicate_slide(prs, slide_index,verbose=False):
     slides_path = os.path.join(temp_dir, "ppt", "slides")
     rels_path = os.path.join(slides_path, "_rels")
 
-    # Get slide files
-    slide_files = sorted([f for f in os.listdir(slides_path) if f.startswith("slide") and f.endswith(".xml")])
+    # Get slide files (sort numerically, not alphabetically)
+    import re
+    def slide_num(filename):
+        match = re.search(r'slide(\d+)', filename)
+        return int(match.group(1)) if match else 0
+    slide_files = sorted([f for f in os.listdir(slides_path) if f.startswith("slide") and f.endswith(".xml")], key=slide_num)
     source_slide_name = slide_files[slide_index]
     new_slide_name = slide_files[-1]  # The new slide we just added will be the last one
 
