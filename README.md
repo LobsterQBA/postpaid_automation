@@ -6,7 +6,8 @@ Automated tools for processing Postpaid marketing data and generating PowerPoint
 
 - **Data Cleaning**: Automatically clean Email/SMS marketing data, extract key fields from Delivery Labels
 - **PPT Report Generation**: Auto-generate weekly PowerPoint reports from templates
-- **Web Apps**: Streamlit interfaces for uploading data and downloading cleaned results or PPT reports
+- **Pulse Check Word Export**: Generate Word (.docx) pulse-check reports from standardized data
+- **Web Apps**: Streamlit interfaces for uploading data and downloading cleaned results or reports
 
 ## Quick Start
 
@@ -18,7 +19,7 @@ pip install -r requirements.txt
 streamlit run app.py
 
 # Run PPT generator web app
-streamlit run ppt_generator_app.py
+streamlit run campaign_ppt_generator.py
 
 # Generate report via command line
 python report_automation.py
@@ -29,13 +30,14 @@ python report_automation.py
 | File | Description |
 |------|-------------|
 | `app.py` | Streamlit data cleaning app - supports Email/SMS data cleaning |
-| `ppt_generator_app.py` | Streamlit PPT generator app - upload Excel to generate reports |
+| `campaign_ppt_generator.py` | Streamlit PPT generator app - upload Excel to generate reports |
 | `report_automation.py` | Command line PPT report generation script |
 | `functions.py` | Core PPT manipulation functions |
 | `EM_cleaning_automation.py` | Email data cleaning script (standalone) |
 | `EM_clicks_cleaning_automation.py` | Email click data cleaning script (standalone) |
 | `template.pptx` | PowerPoint template file |
 | `data_template.xlsx` | Sample data template |
+| `pulse_check_template.docx` | Word pulse-check template |
 
 ## Data Format Requirements
 
@@ -52,6 +54,14 @@ Supports uploading:
 - SMS Data (PBI or Branch.io export)
 - Deploy Document (MD/DD Excel)
 
+### Pulse Check Word Export (campaign_ppt_generator.py)
+Excel file must contain the following sheets:
+- `EM`
+- `SMS`
+- `SLs`
+
+Select **Pulse Check (Word .docx)** in the output selector to download a Word report.
+
 ## Dependencies
 
 - python-pptx - PPT manipulation
@@ -59,3 +69,4 @@ Supports uploading:
 - streamlit - Web interface
 - openpyxl - Excel read/write
 - lxml, pillow, numpy - Supporting libraries
+- python-docx - Word document generation

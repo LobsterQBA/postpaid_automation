@@ -9,8 +9,10 @@ import io
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Pt
+from pptx.dml.color import RGBColor
 from copy import deepcopy
 import os
+from pulse_check_docx import build_pulse_check_docx
 
 # ========== PAGE CONFIG ==========
 st.set_page_config(
@@ -170,6 +172,13 @@ def add_data_to_table(slide, data, font_size=9):
                     run.text = col_name
                     run.font.size = Pt(font_size + 1)
                     run.font.bold = True
+                    run.font.color.rgb = RGBColor(255, 255, 255)  # White text
+            
+            # Apply Magenta background to header row
+            for i in range(cols):
+                cell = table.cell(0, i)
+                cell.fill.solid()
+                cell.fill.fore_color.rgb = RGBColor(226, 0, 116)  # Magenta #E20074
             
             # Update data rows (row 1+)
             for r in range(data.shape[0]):
@@ -237,6 +246,31 @@ def process_email_summary(em_data):
     return result
 
 
+def process_email_summary_total(em_data):
+    """
+    Create Email Summary table aggregated across all Touches
+    Columns: Segment | Deliveries | Open Rate | CTR
+    """
+    if em_data is None or len(em_data) == 0:
+        return pd.DataFrame(columns=['Segment', 'Deliveries', 'Open Rate', 'CTR'])
+
+    total_deliveries = em_data['Deliveries'].sum()
+    total_opens = em_data['Unique Opens'].sum()
+    total_clicks = em_data['Unique Clicks'].sum()
+
+    open_rate = total_opens / total_deliveries if total_deliveries else 0
+    ctr = total_clicks / total_deliveries if total_deliveries else 0
+
+    result = pd.DataFrame([{
+        'Segment': 'Total',
+        'Deliveries': format_number(total_deliveries),
+        'Open Rate': format_percent(open_rate),
+        'CTR': format_percent(ctr)
+    }])
+
+    return result
+
+
 def process_sms_summary(sms_data):
     """
     Create SMS Summary table aggregated by Touch
@@ -263,6 +297,26 @@ def process_sms_summary(sms_data):
     
     return result
 
+
+def process_sms_summary_total(sms_data):
+    """
+    Create SMS Summary table aggregated across all Touches
+    Columns: Segment | Deliveries | CTR
+    """
+    if sms_data is None or len(sms_data) == 0:
+        return pd.DataFrame(columns=['Segment', 'Deliveries', 'CTR'])
+
+    total_deliveries = sms_data['Deliveries'].sum()
+    total_clicks = sms_data['PBI Unique Clicks'].sum() if 'PBI Unique Clicks' in sms_data.columns else 0
+    ctr = total_clicks / total_deliveries if total_deliveries else 0
+
+    result = pd.DataFrame([{
+        'Segment': 'Total',
+        'Deliveries': format_number(total_deliveries),
+        'CTR': format_percent(ctr)
+    }])
+
+    return result
 
 def process_em_data(em_data):
     """
@@ -402,8 +456,9 @@ def process_sl_data(sl_data, em_data=None):
     1. Subject Line
     2. Cohort
     3. OS (Operating System)
-    4. Open Rate (OR)
-    5. Click Rate (CTR)
+    4. Deliveries
+    5. Open Rate (OR)
+    6. Click Rate (CTR)
     """
     df = sl_data.copy()
     
@@ -418,6 +473,20 @@ def process_sl_data(sl_data, em_data=None):
     if 'Operating System' in df.columns:
         df['OS'] = df['Operating System']
         display_cols.append('OS')
+
+    # Deliveries (support common variants)
+    if 'Delivered' in df.columns:
+        df['Deliveries'] = df['Delivered']
+        display_cols.append('Deliveries')
+    elif 'Deliveries' in df.columns:
+        display_cols.append('Deliveries')
+    elif 'Sum of Unique People Delivered [v8]' in df.columns:
+        df['Deliveries'] = df['Sum of Unique People Delivered [v8]']
+        display_cols.append('Deliveries')
+        
+    # Add Winner/Loser column (empty for manual entry)
+    df['Winner/Loser'] = ''
+    display_cols.append('Winner/Loser')
     
     # Open Rate and Click Rate
     if 'OR' in df.columns:
@@ -428,7 +497,7 @@ def process_sl_data(sl_data, em_data=None):
         df['Click Rate'] = df['CTR']
         display_cols.append('Click Rate')
     
-    # Filter to existing columns
+    # Filter to existing columns (Winner/Loser is newly created so it will exist)
     display_cols = [c for c in display_cols if c in df.columns]
     
     table_df = df[display_cols].copy()
@@ -438,6 +507,8 @@ def process_sl_data(sl_data, em_data=None):
         table_df['Subject Line'] = table_df['Subject Line'].apply(lambda x: truncate_text(x, 45))
     
     # Format percentages
+    if 'Deliveries' in table_df.columns:
+        table_df['Deliveries'] = table_df['Deliveries'].apply(format_number)
     if 'Open Rate' in table_df.columns:
         table_df['Open Rate'] = table_df['Open Rate'].apply(format_percent)
     if 'Click Rate' in table_df.columns:
@@ -521,10 +592,17 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
     prs = DS.duplicate_slide(prs, nav['titleslide'], verbose=False)
     DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', campaign_name, verbose=False)
     
-    # === Campaign Summary Section - Email Summary by Touch ===
+    # === Campaign Summary Section ===
     prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
     DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Campaign Summary', verbose=False)
     
+    # Email Summary table (Total)
+    if em_data is not None and len(em_data) > 0:
+        email_summary_total = process_email_summary_total(em_data)
+        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary (Total)', verbose=False)
+        add_data_to_table(prs.slides[-1], email_summary_total)
+
     # Email Summary table (by Touch)
     if em_data is not None and len(em_data) > 0:
         email_summary = process_email_summary(em_data)
@@ -532,6 +610,13 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], email_summary)
     
+    # SMS Summary table (Total)
+    if sms_data is not None and len(sms_data) > 0:
+        sms_summary_total = process_sms_summary_total(sms_data)
+        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary (Total)', verbose=False)
+        add_data_to_table(prs.slides[-1], sms_summary_total)
+
     # SMS Summary table (by Touch)
     if sms_data is not None and len(sms_data) > 0:
         sms_summary = process_sms_summary(sms_data)
@@ -592,6 +677,93 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
     prs.save(output)
     output.seek(0)
     return output
+
+
+def _metric_weighted_widths(columns):
+    metric_headers = {
+        "Deliveries", "Unique Opens", "Unique Clicks", "Open Rate", "Click Rate",
+        "Clicks", "CTR", "OR", "Sent", "Sent (Est.)"
+    }
+    weights = []
+    for col in columns:
+        if col in {"Creative", "Subject Line"}:
+            weights.append(3)
+        elif col in {"Touch", "OS", "Cohort", "Audience Details 1", "Audience Details 2", "Audience Details 3", "SMS Testing Variant"}:
+            weights.append(2)
+        elif col in metric_headers:
+            weights.append(1)
+        else:
+            weights.append(2)
+    total = sum(weights) if weights else 1
+    return [w / total for w in weights]
+
+
+def _pulse_check_sections(em_data, sms_data, sl_data):
+    sections = []
+
+    if em_data is not None and len(em_data) > 0:
+        em_total = process_email_summary_total(em_data)
+        sections.append({
+            "header": "Email Summary (Total)",
+            "data": em_total,
+            "widths": [0.30, 0.23, 0.23, 0.24]
+        })
+        em_touch = process_email_summary(em_data)
+        sections.append({
+            "header": "Email Summary by Touch",
+            "data": em_touch,
+            "widths": [0.30, 0.23, 0.23, 0.24]
+        })
+
+    if sms_data is not None and len(sms_data) > 0:
+        sms_total = process_sms_summary_total(sms_data)
+        sections.append({
+            "header": "SMS Summary (Total)",
+            "data": sms_total,
+            "widths": [0.40, 0.30, 0.30]
+        })
+        sms_touch = process_sms_summary(sms_data)
+        sections.append({
+            "header": "SMS Summary by Touch",
+            "data": sms_touch,
+            "widths": [0.40, 0.30, 0.30]
+        })
+
+    if em_data is not None and len(em_data) > 0:
+        em_perf = process_em_data(em_data)
+        sections.append({
+            "header": "Email Performance Overview",
+            "data": em_perf,
+            "widths": _metric_weighted_widths(em_perf.columns)
+        })
+
+    if sms_data is not None and len(sms_data) > 0:
+        sms_perf = process_sms_data(sms_data)
+        sections.append({
+            "header": "SMS Performance Overview",
+            "data": sms_perf,
+            "widths": _metric_weighted_widths(sms_perf.columns)
+        })
+
+    if sl_data is not None and len(sl_data) > 0:
+        sl_table = process_sl_data(sl_data)
+        sections.append({
+            "header": "Subject Line Testing Results",
+            "data": sl_table,
+            "widths": _metric_weighted_widths(sl_table.columns)
+        })
+
+    if sms_data is not None and len(sms_data) > 0:
+        has_testing = check_sms_has_testing(sms_data)
+        if has_testing:
+            sms_testing = process_sms_testing_data(sms_data)
+            sections.append({
+                "header": "SMS Testing Results",
+                "data": sms_testing,
+                "widths": _metric_weighted_widths(sms_testing.columns)
+            })
+
+    return sections
 
 
 # ========== MAIN UI ==========
@@ -687,33 +859,60 @@ if uploaded_file is not None:
             st.info("📊 No SMS Testing Variant - will generate standard layout")
         
         st.markdown("---")
+        st.subheader("📄 Output Style")
+        report_style = st.radio(
+            "Choose output format",
+            options=[
+                "Campaign Report (PPT)",
+                "Pulse Check (Word .docx)"
+            ],
+            help="Pulse Check output generates a Word document using the pulse-check template."
+        )
+
+        st.markdown("---")
         
         # Generate button
-        if st.button("🚀 Generate PPT Report", use_container_width=True):
-            with st.spinner("Generating your PPT report..."):
-                # Load template
-                template_path = os.path.join(os.path.dirname(__file__), 'template.pptx')
-                with open(template_path, 'rb') as f:
-                    template_bytes = f.read()
+        if st.button("🚀 Generate Report", use_container_width=True):
+            with st.spinner("Generating your report..."):
+                if report_style == "Pulse Check (Word .docx)":
+                    template_path = os.path.join(os.path.dirname(__file__), 'pulse_check_template.docx')
+                    sections = _pulse_check_sections(em_filtered, sms_filtered, sl_filtered)
+                    docx_output = build_pulse_check_docx(
+                        template_path=template_path,
+                        title_line=f"{campaign_name} - Engagement Pulse Check",
+                        sections=sections
+                    )
+                    file_suffix = "pulse_check"
+                    download_ext = "docx"
+                    download_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                else:
+                    # Load template
+                    template_path = os.path.join(os.path.dirname(__file__), 'template.pptx')
+                    with open(template_path, 'rb') as f:
+                        template_bytes = f.read()
+                    
+                    # Generate PPT
+                    ppt_output = generate_campaign_ppt(
+                        em_filtered, 
+                        sms_filtered, 
+                        sl_filtered, 
+                        campaign_name, 
+                        template_bytes
+                    )
+                    docx_output = ppt_output
+                    file_suffix = "report"
+                    download_ext = "pptx"
+                    download_mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 
-                # Generate PPT
-                ppt_output = generate_campaign_ppt(
-                    em_filtered, 
-                    sms_filtered, 
-                    sl_filtered, 
-                    campaign_name, 
-                    template_bytes
-                )
-                
-                st.markdown('<div class="success-box">✅ PPT Report Generated Successfully!</div>', unsafe_allow_html=True)
+                st.markdown('<div class="success-box">✅ Report Generated Successfully!</div>', unsafe_allow_html=True)
                 
                 # Download button
                 safe_filename = campaign_name.replace("'", "").replace(" ", "_")
                 st.download_button(
-                    label="📥 Download PPT Report",
-                    data=ppt_output,
-                    file_name=f"{safe_filename}_report.pptx",
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    label="📥 Download Report",
+                    data=docx_output,
+                    file_name=f"{safe_filename}_{file_suffix}.{download_ext}",
+                    mime=download_mime,
                     use_container_width=True
                 )
     

@@ -157,4 +157,3 @@ final_EM_df = find_SLs(clean_EM_df, file_path, sheet_name)
 
 ## Save the clean EM data as a csv file
 final_EM_df.to_excel('clean_EM.xlsx', index=False)
-

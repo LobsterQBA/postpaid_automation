@@ -4,15 +4,27 @@ __pycache__/
 
 # IDE
 .vscode/
+.idea/
 
-# Output files (optional - remove this line if you want to track output)
+# Output files
 output_*.pptx
+*.docx
+*.pdf
+
+# Data files (Exclude all Excel files by default)
+*.xlsx
+*.xlsm
+*.xls
+
+# Whitelist specific template/sample files
+!data_template.xlsx
+!PPT_Sample_Input_Data.xlsx
+!clean_EM.xlsx
+!clean_EM_clicks.xlsx
+!clean_SMS.xlsx
 
 # Temp
 temp_pptx/
-# Ignore files
 .DS_Store
-__pycache__/
-*.pyc
 test_output*.pptx
-
+~$*

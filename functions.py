@@ -184,68 +184,6 @@ def duplicate_slide(prs, slide_index,verbose=False):
     # Load the modified presentation
     return prs
 
-#####IGNORE THIS FUNCTION#####
-def find_replace_text_DEPR(slidename,find,replace, verbose=False):
-    for shape in slidename.shapes:
-        if shape.has_text_frame:
-            lower_text = shape.text.lower()
-            if find.lower() in lower_text:
-                if verbose:
-                    print("Original Text:", lower_text)
-                
-                # Assume we're replacing all paragraphs and using the first run's formatting
-                first_paragraph = shape.text_frame.paragraphs[0]
-                if first_paragraph.runs:
-                    old_run = first_paragraph.runs[0]
-                    
-                    # Store old formatting
-                    font = old_run.font
-
-                    color = None
-                    brightness = None
-                    if font.color is not None:
-                        if getattr(font.color, "rgb", None):
-                            color = font.color.rgb
-                        elif getattr(font.color, "_color", None) and getattr(font.color._color, "theme_color", None):
-                            color = font.color._color.theme_color
-                            brightness = font.color.brightness
-                        else:
-                                # no color explicitly set
-                            color = None
-                            brightness = None
-
-
-                    
-                        #color = RGBColor(255,255,255)
-
-                    old_formatting = {
-                        "name": font.name,
-                        "bold": font.bold,
-                        "italic": font.italic,
-                        "size": font.size,
-                        "color": color
-                        ,"brightness": brightness
-                    }
-
-                # Clear the text
-                shape.text_frame.clear()
-                shape.text_frame.text = replace
-                if verbose:
-                    print("New Text:", replace)
-                    print("\n")
-                for paragraph in shape.text_frame.paragraphs:
-                    for run in paragraph.runs:
-                        font = run.font
-
-                        font.name = old_formatting["name"]
-                        font.bold = old_formatting["bold"]
-                        font.italic = old_formatting["italic"]
-                        font.size = old_formatting["size"]
-                        try:
-                            font.color.rgb = old_formatting["color"]
-                        except:
-                            font.color.theme_color = old_formatting["color"]
-                            font.color.brightness = old_formatting['brightness']
 
 
 from pptx.dml.color import RGBColor
@@ -374,7 +312,7 @@ def add_data_table_new(slide, tablename, data, header=False):
                 table = shape.table
                 rows = len(table.rows)
                 cols = len(table.columns)
-                if header == False:
+                if not header:
                     rows_new = rows
                 else:
                     rows_new = rows - 1
@@ -389,7 +327,7 @@ def add_data_table_new(slide, tablename, data, header=False):
                     print(f'Data fits table {tablename}, updating cells with formatting...')
                     for r in range(data.shape[0]):
                         for c in range(data.shape[1]):
-                            if header == False:
+                            if not header:
                                 cell = table.cell(r + 1, c)  # +1 to skip header
                             else:
                                 cell = table.cell(r, c)
