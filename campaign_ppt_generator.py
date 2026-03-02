@@ -625,9 +625,16 @@ def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
     # Email Summary table (Total)
     if em_data is not None and len(em_data) > 0:
         email_summary_total = process_email_summary_total(em_data)
-        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['highlevelslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary (Total)', verbose=False)
         add_data_to_table(prs.slides[-1], email_summary_total)
+    
+    # SMS Summary table (Total)
+    if sms_data is not None and len(sms_data) > 0:
+        sms_summary_total = process_sms_summary_total(sms_data)
+        prs = DS.duplicate_slide(prs, nav['highlevelslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary (Total)', verbose=False)
+        add_data_to_table(prs.slides[-1], sms_summary_total)
 
     # Email Summary table (by Touch)
     if em_data is not None and len(em_data) > 0:
@@ -635,13 +642,6 @@ def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
         prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], email_summary)
-    
-    # SMS Summary table (Total)
-    if sms_data is not None and len(sms_data) > 0:
-        sms_summary_total = process_sms_summary_total(sms_data)
-        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary (Total)', verbose=False)
-        add_data_to_table(prs.slides[-1], sms_summary_total)
 
     # SMS Summary table (by Touch)
     if sms_data is not None and len(sms_data) > 0:
@@ -649,18 +649,8 @@ def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
         prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], sms_summary)
-    
-    # === Email High-Level Section ===
-    if em_data is not None and len(em_data) > 0:
-        prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email High-Level Results', verbose=False)
-        
-        em_table = process_em_data(em_data)
-        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
-        add_data_to_table(prs.slides[-1], em_table)
 
-    # == Subject Line Section (Represents SLs with no testing on slide, SL testing on additional slide)
+    # == Subject Line Section
     if em_data is not None and len(em_data) > 0:
         prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Results', verbose=False)
@@ -668,26 +658,32 @@ def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
         sl_table = process_sl_data(em_data)
 
         prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Results', verbose=False)
         add_data_to_table(prs.slides[-1], sl_table)
 
-    # === Subject Line Testing Section (only if SL Testing Variant has data) ===
+    # === Subject Line Testing (only if SL Testing Variant has data) ===
     if em_data is not None and len(em_data) > 0:
         has_sl_testing = check_sl_has_testing(em_data)
         if has_sl_testing:
-            prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
-            DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing', verbose=False)
-
             sl_testing_table = process_sl_testing(em_data)
-
             prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing Results', verbose=False)
             add_data_to_table(prs.slides[-1], sl_testing_table)
     
-    # === SMS High-Level Section ===
+    # === Email Segment Section ===
+    if em_data is not None and len(em_data) > 0:
+        prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Results', verbose=False)
+        
+        em_table = process_em_data(em_data)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
+        add_data_to_table(prs.slides[-1], em_table)
+    
+    # === SMS Segment Section ===
     if sms_data is not None and len(sms_data) > 0:
         prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS High-Level Results', verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Results', verbose=False)
         
         # SMS Detailed Data table (full data)
         sms_table = process_sms_data(sms_data)
@@ -695,17 +691,22 @@ def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Performance Overview', verbose=False)
         add_data_to_table(prs.slides[-1], sms_table)
 
-    # === SMS Testing Section (only if SMS Testing Variant has data) ===
+    # === SMS Testing (only if SMS Testing Variant has data) ===
     if sms_data is not None and len(sms_data) > 0:
         has_testing = check_sms_has_testing(sms_data)
         if has_testing:
-            prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
-            DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Testing', verbose=False)
-            
             sms_testing_table = process_sms_testing_data(sms_data)
             prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Testing Results', verbose=False)
             add_data_to_table(prs.slides[-1], sms_testing_table)
+
+    # === Thank You Slide ===
+    prs = DS.duplicate_slide(prs, nav['thankyouslide'], verbose=False)
+    DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', campaign_name, verbose=False)
+
+    # === Appendix Slide ===
+    prs = DS.duplicate_slide(prs, nav['appendixslide'], verbose=False)
+    DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', campaign_name, verbose=False)
     
     # === Cleanup template slides ===
     for i in sorted(nav.values(), reverse=True):
