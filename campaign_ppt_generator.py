@@ -104,16 +104,6 @@ def format_percent(x):
         return str(x)
 
 
-def truncate_text(text, max_length=50):
-    """Truncate long text with ellipsis"""
-    if pd.isna(text):
-        return ""
-    text = str(text)
-    if len(text) > max_length:
-        return text[:max_length-3] + "..."
-    return text
-
-
 def is_column_empty(df, col_name):
     """Check if a column is completely empty or all NaN"""
     if col_name not in df.columns:
@@ -373,7 +363,7 @@ def process_em_data(em_data):
     return table_df
 
 
-def process_sms_data(sms_data, has_testing=False):
+def process_sms_data(sms_data):
     """
     Process SMS data for SMS Performance Overview slide
     
@@ -434,10 +424,6 @@ def process_sms_data(sms_data, has_testing=False):
     
     table_df = df[display_cols].copy()
     
-    # Truncate Creative column to fit
-    if 'Creative' in table_df.columns:
-        table_df['Creative'] = table_df['Creative'].apply(lambda x: truncate_text(x, 50))
-    
     # Format numbers
     if 'Deliveries' in table_df.columns:
         table_df['Deliveries'] = table_df['Deliveries'].apply(format_number)
@@ -449,73 +435,117 @@ def process_sms_data(sms_data, has_testing=False):
     return table_df
 
 
-def process_sl_data(sl_data, em_data=None):
-    """
-    Process Subject Line Testing data
-    Table columns (in order):
-    1. Subject Line
-    2. Cohort
-    3. OS (Operating System)
-    4. Deliveries
-    5. Open Rate (OR)
-    6. Click Rate (CTR)
-    """
-    df = sl_data.copy()
-    
-    # Build the table with exact columns
-    display_cols = ['Subject Line']
-    
-    # Add Cohort column
-    if 'Cohort' in df.columns:
-        display_cols.append('Cohort')
-    
-    # Add OS column (from Operating System)
-    if 'Operating System' in df.columns:
-        df['OS'] = df['Operating System']
-        display_cols.append('OS')
+def process_sl_data(em_data):
+# Subject Line Results table from EM data in this order:
+# Subject Line, Touch, OS, Cohort, Audience Details 1/2/3, Deliveries, Open Rate, Click Rate"
+    if em_data is None or len(em_data) == 0:
+        return pd.DataFrame(columns=[
+            'Subject Line', 'Touch', 'OS', 'Cohort',
+            'Audience Details 1', 'Audience Details 2', 'Audience Details 3',
+            'Deliveries', 'Open Rate', 'Click Rate'
+        ])
 
-    # Deliveries (support common variants)
-    if 'Delivered' in df.columns:
+    df = em_data.copy()
+
+    # Ensure Deliveries exists (support common variants)
+    if 'Deliveries' not in df.columns and 'Delivered' in df.columns:
         df['Deliveries'] = df['Delivered']
-        display_cols.append('Deliveries')
-    elif 'Deliveries' in df.columns:
-        display_cols.append('Deliveries')
-    elif 'Sum of Unique People Delivered [v8]' in df.columns:
+    if 'Deliveries' not in df.columns and 'Sum of Unique People Delivered [v8]' in df.columns:
         df['Deliveries'] = df['Sum of Unique People Delivered [v8]']
-        display_cols.append('Deliveries')
-        
-    # Add Winner/Loser column (empty for manual entry)
-    df['Winner/Loser'] = ''
-    display_cols.append('Winner/Loser')
-    
-    # Open Rate and Click Rate
-    if 'OR' in df.columns:
-        df['Open Rate'] = df['OR']
-        display_cols.append('Open Rate')
-    
-    if 'CTR' in df.columns:
-        df['Click Rate'] = df['CTR']
-        display_cols.append('Click Rate')
-    
-    # Filter to existing columns (Winner/Loser is newly created so it will exist)
-    display_cols = [c for c in display_cols if c in df.columns]
-    
-    table_df = df[display_cols].copy()
-    
-    # Truncate subject lines
-    if 'Subject Line' in table_df.columns:
-        table_df['Subject Line'] = table_df['Subject Line'].apply(lambda x: truncate_text(x, 45))
-    
-    # Format percentages
+
+    # Compute rates (from EM metrics)
+    if 'Open Rate' not in df.columns and 'Unique Opens' in df.columns and 'Deliveries' in df.columns:
+        df['Open Rate'] = df['Unique Opens'] / df['Deliveries']
+
+    if 'Click Rate' not in df.columns and 'Unique Clicks' in df.columns and 'Deliveries' in df.columns:
+        df['Click Rate'] = df['Unique Clicks'] / df['Deliveries']
+
+    # Required base order
+    ordered_cols = ['Subject Line', 'Touch', 'OS', 'Cohort']
+
+    # Audience details (only include if they have data)
+    for c in ['Audience Details 1', 'Audience Details 2', 'Audience Details 3']:
+        if c in df.columns and not is_column_empty(df, c):
+            ordered_cols.append(c)
+
+    # Metrics at end
+    ordered_cols += ['Deliveries', 'Open Rate', 'Click Rate']
+
+    # Keep only columns that exist
+    ordered_cols = [c for c in ordered_cols if c in df.columns]
+
+    table_df = df[ordered_cols].copy()
+
+    # Format output
     if 'Deliveries' in table_df.columns:
         table_df['Deliveries'] = table_df['Deliveries'].apply(format_number)
     if 'Open Rate' in table_df.columns:
         table_df['Open Rate'] = table_df['Open Rate'].apply(format_percent)
     if 'Click Rate' in table_df.columns:
         table_df['Click Rate'] = table_df['Click Rate'].apply(format_percent)
-    
+
     return table_df
 
+def check_sl_has_testing(em_data):
+    """Check if SL data has testing variants"""
+    if 'SL Testing Variant' not in em_data.columns:
+        return False
+    return not is_column_empty(em_data, 'SL Testing Variant')
+
+def process_sl_testing(em_data):
+# Subject Line Results table from EM data in this order:
+# Subject Line, Touch, OS, Cohort, Audience Details 1/2/3, Deliveries, Open Rate, Click Rate"
+    if em_data is None or len(em_data) == 0:
+        return pd.DataFrame(columns=[
+            'Variant', 'Subject Line', 'Touch', 'OS', 'Cohort',
+            'Audience Details 1', 'Audience Details 2', 'Audience Details 3',
+            'Deliveries', 'Open Rate', 'Click Rate', 'Winner/Loser'
+        ])
+
+    df = em_data.copy()
+
+    # Create Variant from SL Testing Variant (required)
+    if 'SL Testing Variant' in df.columns:
+        df['Variant'] = df['SL Testing Variant']
+
+    # Ensure Deliveries exists (support common variants)
+    if 'Deliveries' not in df.columns and 'Delivered' in df.columns:
+        df['Deliveries'] = df['Delivered']
+    if 'Deliveries' not in df.columns and 'Sum of Unique People Delivered [v8]' in df.columns:
+        df['Deliveries'] = df['Sum of Unique People Delivered [v8]']
+
+    # Compute rates (from EM metrics)
+    if 'Open Rate' not in df.columns and 'Unique Opens' in df.columns and 'Deliveries' in df.columns:
+        df['Open Rate'] = df['Unique Opens'] / df['Deliveries']
+
+    if 'Click Rate' not in df.columns and 'Unique Clicks' in df.columns and 'Deliveries' in df.columns:
+        df['Click Rate'] = df['Unique Clicks'] / df['Deliveries']
+
+    # Required base order
+    ordered_cols = ['Variant', 'Subject Line', 'Touch', 'OS', 'Cohort']
+
+    # Audience details (only include if they have data)
+    for c in ['Audience Details 1', 'Audience Details 2', 'Audience Details 3']:
+        if c in df.columns and not is_column_empty(df, c):
+            ordered_cols.append(c)
+
+    # Metrics at end
+    ordered_cols += ['Deliveries', 'Open Rate', 'Click Rate']
+
+    # Keep only columns that exist
+    ordered_cols = [c for c in ordered_cols if c in df.columns]
+
+    table_df = df[ordered_cols].copy()
+
+    # Format output
+    if 'Deliveries' in table_df.columns:
+        table_df['Deliveries'] = table_df['Deliveries'].apply(format_number)
+    if 'Open Rate' in table_df.columns:
+        table_df['Open Rate'] = table_df['Open Rate'].apply(format_percent)
+    if 'Click Rate' in table_df.columns:
+        table_df['Click Rate'] = table_df['Click Rate'].apply(format_percent)
+
+    return table_df
 
 def process_sms_testing_data(sms_data):
     """
@@ -558,10 +588,6 @@ def process_sms_testing_data(sms_data):
     
     table_df = df[display_cols].copy()
     
-    # Truncate Creative column
-    if 'Creative' in table_df.columns:
-        table_df['Creative'] = table_df['Creative'].apply(lambda x: truncate_text(x, 40))
-    
     # Format numbers
     if 'Deliveries' in table_df.columns:
         table_df['Deliveries'] = table_df['Deliveries'].apply(format_number)
@@ -581,7 +607,7 @@ def check_sms_has_testing(sms_data):
 
 
 # ========== PPT GENERATION ==========
-def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_bytes):
+def generate_campaign_ppt(em_data, sms_data, campaign_name, template_bytes):
     """Generate PPT from campaign data"""
     import functions as DS
     
@@ -599,28 +625,28 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
     # Email Summary table (Total)
     if em_data is not None and len(em_data) > 0:
         email_summary_total = process_email_summary_total(em_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary (Total)', verbose=False)
         add_data_to_table(prs.slides[-1], email_summary_total)
 
     # Email Summary table (by Touch)
     if em_data is not None and len(em_data) > 0:
         email_summary = process_email_summary(em_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], email_summary)
     
     # SMS Summary table (Total)
     if sms_data is not None and len(sms_data) > 0:
         sms_summary_total = process_sms_summary_total(sms_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary (Total)', verbose=False)
         add_data_to_table(prs.slides[-1], sms_summary_total)
 
     # SMS Summary table (by Touch)
     if sms_data is not None and len(sms_data) > 0:
         sms_summary = process_sms_summary(sms_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], sms_summary)
     
@@ -630,9 +656,33 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email High-Level Results', verbose=False)
         
         em_table = process_em_data(em_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
         add_data_to_table(prs.slides[-1], em_table)
+
+    # == Subject Line Section (Represents SLs with no testing on slide, SL testing on additional slide)
+    if em_data is not None and len(em_data) > 0:
+        prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Results', verbose=False)
+
+        sl_table = process_sl_data(em_data)
+
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
+        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
+        add_data_to_table(prs.slides[-1], sl_table)
+
+    # === Subject Line Testing Section (only if SL Testing Variant has data) ===
+    if em_data is not None and len(em_data) > 0:
+        has_sl_testing = check_sl_has_testing(em_data)
+        if has_sl_testing:
+            prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
+            DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing', verbose=False)
+
+            sl_testing_table = process_sl_testing(em_data)
+
+            prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
+            DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing Results', verbose=False)
+            add_data_to_table(prs.slides[-1], sl_testing_table)
     
     # === SMS High-Level Section ===
     if sms_data is not None and len(sms_data) > 0:
@@ -641,20 +691,10 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
         
         # SMS Detailed Data table (full data)
         sms_table = process_sms_data(sms_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Performance Overview', verbose=False)
         add_data_to_table(prs.slides[-1], sms_table)
-    
-    # === Subject Line Testing Section (only if SLs sheet has data) ===
-    if sl_data is not None and len(sl_data) > 0:
-        prs = DS.duplicate_slide(prs, nav['subtitleslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing', verbose=False)
-        
-        sl_table = process_sl_data(sl_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
-        DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing Results', verbose=False)
-        add_data_to_table(prs.slides[-1], sl_table.head(15))  # Limit rows for readability
-    
+
     # === SMS Testing Section (only if SMS Testing Variant has data) ===
     if sms_data is not None and len(sms_data) > 0:
         has_testing = check_sms_has_testing(sms_data)
@@ -663,7 +703,7 @@ def generate_campaign_ppt(em_data, sms_data, sl_data, campaign_name, template_by
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Testing', verbose=False)
             
             sms_testing_table = process_sms_testing_data(sms_data)
-            prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+            prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'SMS Testing Results', verbose=False)
             add_data_to_table(prs.slides[-1], sms_testing_table)
     
@@ -767,9 +807,9 @@ def _pulse_check_sections(em_data, sms_data, sl_data):
 
 
 # ========== MAIN UI ==========
-
+# Update to exclude "SL" tab and instead read in SL data from "EM" tab
 # File upload section
-st.markdown('<div class="info-box">📁 <strong>Data Format:</strong> Excel file with tabs: <code>EM</code>, <code>SMS</code>, <code>SLs</code> (Data Repository standard)</div>', unsafe_allow_html=True)
+st.markdown('<div class="info-box">📁 <strong>Data Format:</strong> Excel file with tabs: <code>EM</code>, <code>SMS</code>, <code>EM Clicks</code> (Data Repository standard)</div>', unsafe_allow_html=True)
 
 # Option to use default Sample Data or upload custom file
 use_sample = st.checkbox("Use PPT_Sample_Input_Data.xlsx from project folder", value=True)
@@ -795,24 +835,24 @@ if uploaded_file is not None:
         if isinstance(uploaded_file, str):
             em_data = pd.read_excel(uploaded_file, sheet_name='EM')
             sms_data = pd.read_excel(uploaded_file, sheet_name='SMS')
-            sl_data = pd.read_excel(uploaded_file, sheet_name='SLs')
+            sl_data = pd.read_excel(uploaded_file, sheet_name='EM')
         else:
             em_data = pd.read_excel(uploaded_file, sheet_name='EM')
             uploaded_file.seek(0)
             sms_data = pd.read_excel(uploaded_file, sheet_name='SMS')
             uploaded_file.seek(0)
-            sl_data = pd.read_excel(uploaded_file, sheet_name='SLs')
+            sl_data = pd.read_excel(uploaded_file, sheet_name='EM')
         
         st.success("✅ Data loaded successfully!")
         
         # Show data summary
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("EM Rows", len(em_data))
-        with col2:
-            st.metric("SMS Rows", len(sms_data))
-        with col3:
-            st.metric("SL Testing Rows", len(sl_data))
+        # col1, col2, col3 = st.columns(3)
+        # with col1:
+          #   st.metric("EM Rows", len(em_data))
+       # with col2:
+         #   st.metric("SMS Rows", len(sms_data))
+       # with col3:
+          #  st.metric("SL Testing Rows", len(em_data))
         
         # Campaign selection
         all_campaigns = set()
@@ -854,9 +894,16 @@ if uploaded_file is not None:
         # SMS Testing status
         has_sms_testing = check_sms_has_testing(sms_filtered)
         if has_sms_testing:
-            st.info("📊 SMS Testing Variant detected - will generate Testing layout")
+            st.info("📊 SMS Testing Variant detected - will generate testing layout")
         else:
             st.info("📊 No SMS Testing Variant - will generate standard layout")
+
+        # SL Testing status (same logic style as SMS)
+        has_sl_testing = check_sl_has_testing(em_filtered)
+        if has_sl_testing:
+            st.info("🔬 Subject Line Testing Variant detected - will generate testing layout")
+        else:
+            st.info("🔬 No Subject Line Testing Variant detected - will generate standard layout")
         
         st.markdown("---")
         st.subheader("📄 Output Style")
@@ -895,7 +942,6 @@ if uploaded_file is not None:
                     ppt_output = generate_campaign_ppt(
                         em_filtered, 
                         sms_filtered, 
-                        sl_filtered, 
                         campaign_name, 
                         template_bytes
                     )
@@ -929,3 +975,4 @@ st.markdown("""
     Made with ❤️ using Streamlit | T-Mobile Marketing Analytics
 </div>
 """, unsafe_allow_html=True)
+
