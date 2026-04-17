@@ -97,7 +97,8 @@ if raw_EM_uploaded_file is not None:
 
     ## Create new dataframe for the cleaned data with the correct column names
     ## Define column names
-    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "Touch", "OS", "Cohort", "SL Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3", "Subject Line", "Preheader", "Sends", "Deliveries", "Unique Opens", "Unique Clicks"]
+    ## Raw data columns first, then analyst-created/extracted columns
+    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "Sends", "Deliveries", "Unique Opens", "Unique Clicks", "Touch", "OS", "Cohort", "SL Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3", "Subject Line", "Preheader"]
     clean_EM_df = pd.DataFrame(columns=columns)
 
 ## Function to process raw EM clicks file into a df
@@ -107,7 +108,8 @@ if raw_EM_clicks_uploaded_file is not None:
 
     ## Create new dataframe for the cleaned data with the correct column names
     ## Define column names
-    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "Touch", "OS", "Cohort", "SL Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3", "CTA", "Position (Module #)", "CTA Offer Details", "CTA Category", "Link Style", "Device Category", "Device Type", "Deliveries", "Total Clicks", "CTR", "Click Share"]
+    ## Raw data columns first, then analyst-created/extracted columns
+    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "CTA", "Position (Module #)", "CTA Offer Details", "CTA Category", "Link Style", "Device Category", "Device Type", "Deliveries", "Total Clicks", "CTR", "Click Share", "Touch", "OS", "Cohort", "SL Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3"]
     clean_EM_clicks_df = pd.DataFrame(columns=columns)
 
 ## Function to process raw SMS file into a df
@@ -118,7 +120,8 @@ if raw_SMSPBI_uploaded_file is not None:
 
     ## Create new dataframe for the cleaned data with the correct column names
     ## Define column names
-    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "Touch", "OS", "Cohort", "SMS Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3", "Creative", "Sends", "Deliveries", "Unique Clicks", "CTR"]
+    ## Raw data columns first, then analyst-created/extracted columns
+    columns = ["Campaign", "Deploy Date", "Delivery Label (Treatment)", "Sends", "Deliveries", "Unique Clicks", "CTR", "Touch", "OS", "Cohort", "SMS Testing Variant", "Other Testing Variant", "Audience Details 1", "Audience Details 2", "Audience Details 3", "Creative"]
     clean_SMS_df = pd.DataFrame(columns=columns)
 
 ## Define mapping: {new column : old column}

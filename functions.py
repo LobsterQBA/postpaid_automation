@@ -3,6 +3,7 @@ import io
 import copy
 import shutil
 import zipfile
+import tempfile
 from lxml import etree
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
@@ -47,7 +48,7 @@ def duplicate_slide(prs, slide_index,verbose=False):
             )
 
     # Now use the XML approach to copy all remaining elements
-    temp_dir = "temp_pptx"
+    temp_dir = os.path.join(tempfile.gettempdir(), "temp_pptx")
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
 
