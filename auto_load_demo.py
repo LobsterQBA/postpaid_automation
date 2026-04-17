@@ -843,7 +843,7 @@ def generate_full_report(em_data, sms_data, sl_data, sms_format, campaign_name, 
 
     eng_summary = process_engagement_summary(em_data, sms_data, sms_format)
     if len(eng_summary) > 0:
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Engagement Results', verbose=False)
         add_data_to_table(prs.slides[-1], eng_summary)
 
@@ -853,12 +853,12 @@ def generate_full_report(em_data, sms_data, sl_data, sms_format, campaign_name, 
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email High-Level Results', verbose=False)
 
         em_touch = process_email_summary_by_touch(em_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Summary by Touch', verbose=False)
         add_data_to_table(prs.slides[-1], em_touch)
 
         em_detail = process_em_detail(em_data)
-        prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+        prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Email Performance Overview', verbose=False)
         add_data_to_table(prs.slides[-1], em_detail)
 
@@ -869,7 +869,7 @@ def generate_full_report(em_data, sms_data, sl_data, sms_format, campaign_name, 
         DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', 'Subject Line Testing', verbose=False)
 
         for audience_label, sl_table in sl_groups:
-            prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+            prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
             title = f"SL Test Results — {truncate_text(audience_label, 40)}"
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', title, verbose=False)
             add_data_to_table(prs.slides[-1], sl_table)
@@ -883,7 +883,7 @@ def generate_full_report(em_data, sms_data, sl_data, sms_format, campaign_name, 
         # Overview slide (all touches combined)
         rcm_overview = process_rcm_detail(sms_data, sms_format)
         if len(rcm_overview) > 0:
-            prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+            prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
             DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE',
                                  f'{label} Overview', verbose=False)
             add_data_to_table(prs.slides[-1], rcm_overview)
@@ -894,7 +894,7 @@ def generate_full_report(em_data, sms_data, sl_data, sms_format, campaign_name, 
             touch_data = sms_data[sms_data['Touch'] == touch]
             detail = process_rcm_detail(touch_data, sms_format)
             if len(detail) > 0:
-                prs = DS.duplicate_slide(prs, nav['smsdataslide'], verbose=False)
+                prs = DS.duplicate_slide(prs, nav['datatableslide'], verbose=False)
                 slide_title = f'RBM Performance Overview — {touch}' if sms_format == "rcm" \
                     else f'SMS Performance Overview — {touch}'
                 DS.find_replace_text(prs.slides[-1], 'PLACE_TEXT_TITLE', slide_title, verbose=False)
